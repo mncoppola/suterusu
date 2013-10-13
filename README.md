@@ -83,4 +83,12 @@ Unhide file/directory
 
     $ ./sock 12 [name]
 
+Hide network PROMISC flag
+
+    $ ./sock 13
+
+Unhide network PROMISC flag
+
+    $ ./sock 14
+
 Note: At the moment, file/dir hiding only hides names in / directory

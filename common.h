@@ -12,6 +12,30 @@
 #define __DEBUG_KEY__ 1         // Debugging of user keypresses
 #define __DEBUG_RW__ 1          // Debugging of sys_read and sys_write hooks
 
+#if __DEBUG__
+# define DEBUG(fmt, ...) printk(fmt, ##__VA_ARGS__)
+#else
+# define DEBUG(fmt, ...)
+#endif
+
+#if __DEBUG_HOOK__
+# define DEBUG_HOOK(fmt, ...) printk(fmt, ##__VA_ARGS__)
+#else
+# define DEBUG_HOOK(fmt, ...)
+#endif
+
+#if __DEBUG_KEY__
+# define DEBUG_KEY(fmt, ...) printk(fmt, ##__VA_ARGS__)
+#else
+# define DEBUG_KEY(fmt, ...)
+#endif
+
+#if __DEBUG_RW__
+# define DEBUG_RW(fmt, ...) printk(fmt, ##__VA_ARGS__)
+#else
+# define DEBUG_RW(fmt, ...)
+#endif
+
 extern unsigned long *sys_call_table;
 
 char *strnstr ( const char *haystack, const char *needle, size_t n );

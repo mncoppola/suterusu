@@ -532,7 +532,7 @@ int n_root_readdir ( struct file *file, void *dirent, filldir_t filldir )
 {
     int ret;
 
-    if ( ! file || ! file->f_vfsmnt ) // XXX is this necessary?
+    if ( ! file || ! file->f_path.mnt ) // XXX is this necessary?
         return 0;
 
     o_root_filldir = filldir;

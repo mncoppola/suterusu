@@ -92,3 +92,9 @@ Unhide network PROMISC flag
     $ ./sock 14
 
 Note: At the moment, file/dir hiding only hides names in / directory
+
+
+File/directory hiding
+---------------------
+
+At the moment, file/dir hiding only hides names on the / filesystem.  Note that names are hidden, not paths.  For instance, giving the name ".blah" to Suterusu will hide the name ".blah" in all directories on the filesystem.

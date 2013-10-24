@@ -561,9 +561,6 @@ int n_root_iterate ( ITERATE_PROTO )
 {
     int ret;
 
-    if ( ! file || ! file->f_path.mnt ) // XXX is this necessary?
-        return 0;
-
     root_filldir = FILLDIR_VAR;
 
     hijack_pause(root_iterate);

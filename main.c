@@ -638,7 +638,7 @@ unsigned long get_symbol ( char *name )
     unsigned long symbol = 0;
     struct ksym ksym;
 
-    #if LINUX_VERSION_CODE <= KERNEL_VERSION(2, 32, 0)
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
     symbol = kallsyms_lookup_name(name);
     #else
     ksym.name = name;

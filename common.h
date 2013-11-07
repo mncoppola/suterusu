@@ -49,6 +49,9 @@ void hijack_stop(void *target);
 
 unsigned long get_symbol(char *name);
 
+void disable_module_loading(void);
+void enable_module_loading(void);
+
 #if defined(_CONFIG_X86_64_)
 extern unsigned long *ia32_sys_call_table;
 #endif

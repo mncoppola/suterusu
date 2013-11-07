@@ -1,6 +1,7 @@
 #include "common.h"
 #include <linux/slab.h>
 #include <asm/cacheflush.h>
+#include <linux/kallsyms.h>
 
 #if defined(_CONFIG_X86_)
     #define HIJACK_SIZE 6
@@ -15,6 +16,11 @@ struct sym_hook {
     unsigned char o_code[HIJACK_SIZE];
     unsigned char n_code[HIJACK_SIZE];
     struct list_head list;
+};
+
+struct ksym {
+    char *name;
+    unsigned long addr;
 };
 
 LIST_HEAD(hooked_syms);
@@ -203,4 +209,37 @@ void *memstr ( const void *haystack, const char *needle, size_t size )
             return (void *)p;
 
     return NULL;
+}
+
+int find_ksym ( void *data, const char *name, struct module *module, unsigned long address )
+{
+    struct ksym *ksym = (struct ksym *)data;
+    char *target = ksym->name;
+
+    if ( strncmp(target, name, KSYM_NAME_LEN) == 0 )
+    {
+        ksym->addr = address;
+        return 1;
+    }
+
+    return 0;
+}
+
+unsigned long get_symbol ( char *name )
+{
+    unsigned long symbol = 0;
+
+    #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
+    symbol = kallsyms_lookup_name(name);
+    #else
+    unsigned int ret;
+    struct ksym;
+
+    ksym.name = name;
+    ksym.addr = 0;
+    ret = kallsyms_on_each_symbol(&find_ksym, &ksym);
+    symbol = ksym.addr;
+    #endif
+
+    return symbol;
 }

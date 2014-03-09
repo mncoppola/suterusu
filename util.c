@@ -2,6 +2,9 @@
 #include <linux/slab.h>
 #include <asm/cacheflush.h>
 #include <linux/kallsyms.h>
+#if defined(_CONFIG_ARM_) && defined(CONFIG_STRICT_MEMORY_RWX)
+#include <asm/mmu_writeable.h>
+#endif
 
 #if defined(_CONFIG_X86_)
     #define HIJACK_SIZE 6
@@ -51,6 +54,26 @@ void cacheflush ( void *begin, unsigned long size )
 {
     flush_icache_range((unsigned long)begin, (unsigned long)begin + size);
 }
+
+# if defined(CONFIG_STRICT_MEMORY_RWX)
+inline void arm_write_hook ( void *target, char *code )
+{
+    unsigned long *target_arm = (unsigned long *)target;
+    unsigned long *code_arm = (unsigned long *)code;
+
+    // We should have something more generalized here, but we'll
+    // get away with it since the ARM hook is always 12 bytes
+    mem_text_write_kernel_word(target_arm, *code_arm);
+    mem_text_write_kernel_word(target_arm + 1, *(code_arm + 1));
+    mem_text_write_kernel_word(target_arm + 2, *(code_arm + 2));
+}
+# else
+inline void arm_write_hook ( void *target, char *code )
+{
+    memcpy(target, code, HIJACK_SIZE);
+    cacheflush(target, HIJACK_SIZE);
+}
+# endif
 #endif
 
 void hijack_start ( void *target, void *new )
@@ -96,8 +119,7 @@ void hijack_start ( void *target, void *new )
     memcpy(target, n_code, HIJACK_SIZE);
     restore_wp(o_cr0);
     #else // ARM
-    memcpy(target, n_code, HIJACK_SIZE);
-    cacheflush(target, HIJACK_SIZE);
+    arm_write_hook(target, n_code);
     #endif
 
     sa = kmalloc(sizeof(*sa), GFP_KERNEL);
@@ -125,8 +147,7 @@ void hijack_pause ( void *target )
             memcpy(target, sa->o_code, HIJACK_SIZE);
             restore_wp(o_cr0);
             #else // ARM
-            memcpy(target, sa->o_code, HIJACK_SIZE);
-            cacheflush(target, HIJACK_SIZE);
+            arm_write_hook(target, sa->o_code);
             #endif
         }
 }
@@ -145,8 +166,7 @@ void hijack_resume ( void *target )
             memcpy(target, sa->n_code, HIJACK_SIZE);
             restore_wp(o_cr0);
             #else // ARM
-            memcpy(target, sa->n_code, HIJACK_SIZE);
-            cacheflush(target, HIJACK_SIZE);
+            arm_write_hook(target, sa->n_code);
             #endif
         }
 }
@@ -165,8 +185,7 @@ void hijack_stop ( void *target )
             memcpy(target, sa->o_code, HIJACK_SIZE);
             restore_wp(o_cr0);
             #else // ARM
-            memcpy(target, sa->o_code, HIJACK_SIZE);
-            cacheflush(target, HIJACK_SIZE);
+            arm_write_hook(target, sa->o_code);
             #endif
 
             list_del(&sa->list);

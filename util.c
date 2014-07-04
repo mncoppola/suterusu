@@ -47,7 +47,11 @@ inline void restore_wp ( unsigned long cr0 )
     write_cr0(cr0);
 
     barrier();
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 1)
     preempt_enable_no_resched();
+#else
+    preempt_enable();
+#endif
 }
 #else // ARM
 void cacheflush ( void *begin, unsigned long size )

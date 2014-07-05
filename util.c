@@ -47,7 +47,7 @@ inline void restore_wp ( unsigned long cr0 )
     write_cr0(cr0);
 
     barrier();
-    preempt_enable_no_resched();
+    preempt_enable();
 }
 #else // ARM
 void cacheflush ( void *begin, unsigned long size )

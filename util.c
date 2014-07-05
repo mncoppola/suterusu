@@ -47,16 +47,7 @@ inline void restore_wp ( unsigned long cr0 )
     write_cr0(cr0);
 
     barrier();
-    /* 37089834528be3ef8cbf927e47c753b3e272a856
-     * The only valid use of preempt_enable_no_resched() is if the very next
-     * line is schedule() or if we know preemption cannot actually be enabled
-     * by that statement due to known more preempt_count 'refs'.
-     */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 1)
-    preempt_enable_no_resched();
-#else
     preempt_enable();
-#endif
 }
 #else // ARM
 void cacheflush ( void *begin, unsigned long size )

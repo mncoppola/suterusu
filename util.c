@@ -47,16 +47,7 @@ inline void restore_wp ( unsigned long cr0 )
     write_cr0(cr0);
 
     barrier();
-    /* 37089834528be3ef8cbf927e47c753b3e272a856
-     * The only valid use of preempt_enable_no_resched() is if the very next
-     * line is schedule() or if we know preemption cannot actually be enabled
-     * by that statement due to known more preempt_count 'refs'.
-     */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 14, 1)
-    preempt_enable_no_resched();
-#else
     preempt_enable();
-#endif
 }
 #else // ARM
 void cacheflush ( void *begin, unsigned long size )
@@ -253,12 +244,74 @@ int find_ksym ( void *data, const char *name, struct module *module, unsigned lo
     return 0;
 }
 
+unsigned long find_kernel_symbol(char *symbol_name, char *search_file)
+{
+        mm_segment_t old_fs;
+        ssize_t bytes;
+        struct file *file = NULL;
+        char read_buf[500];
+        char *p, tmp[20];
+        unsigned int addr = 0;
+        int i = 0;
+
+        file = filp_open(search_file, O_RDONLY, 0);
+        if (!file)
+                return -1;
+
+        if (!file->f_op->read)
+                return -1;
+
+        old_fs = get_fs();
+        set_fs(get_ds());
+
+        while ((bytes = file->f_op->read(file, read_buf, 500, &file->f_pos))) {
+                if ((p = strstr(read_buf, symbol_name)) != NULL) {
+                        while (*p--)
+                                if (*p == '\n')
+                                        break;
+
+                        while (*p++ != ' ') {
+                                tmp[i++] = *p;
+                        }
+                        tmp[--i] = '\0';
+
+                        addr = simple_strtoul(tmp, NULL, 16);
+                        //DEBUG("find %s at: 0x%8x\n", symbol_name, addr);
+
+                        break;
+                }
+        }
+
+
+        filp_close(file,NULL);
+        set_fs(old_fs);
+
+        return addr;
+}
+unsigned long try_find_kernel_symbol(char *symbol_name, char *search_file,
+                                    int search_num)
+{
+        unsigned int addr = 0;
+        int i = 0;
+
+        for (i = 0; i < search_num; i++) {
+                addr = find_kernel_symbol(symbol_name, search_file);
+                if (addr)
+                        break;
+        }
+
+        return addr;
+}
+
 unsigned long get_symbol ( char *name )
 {
     unsigned long symbol = 0;
 
     #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
     symbol = kallsyms_lookup_name(name);
+    #elif LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 32)
+	/* it has been tested on CentOS 6.5 with 2.6.32-431.el6.x86_64 */
+    symbol = try_find_kernel_symbol(name, KALL_SYMS_NAME, 3);
     #else
     unsigned int ret;
     struct ksym;

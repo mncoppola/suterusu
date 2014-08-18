@@ -48,7 +48,10 @@ void hijack_pause(void *target);
 void hijack_resume(void *target);
 void hijack_stop(void *target);
 
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 30)
 unsigned long get_symbol(char *name);
+#endif
 
 void disable_module_loading(void);
 void enable_module_loading(void);

@@ -877,6 +877,7 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
             /* Enable module loading */
             case 15:
                 {
+                    #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31)
                     int *modules_disabled;
 
                     DEBUG("Enabling module loading\n");
@@ -885,6 +886,9 @@ static long n_inet_ioctl ( struct socket *sock, unsigned int cmd, unsigned long 
 
                     if ( modules_disabled )
                         *modules_disabled = 0;
+                    #else
+                    DEBUG("Disabling module loading not supported in this kernel version!\n");
+                    #endif
                 }
                 break;
 

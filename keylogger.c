@@ -20,7 +20,7 @@ unsigned long sequence[] = {
     61959,
     42,     // Volume Up uppress
     63232,
--    63232,
+    63232,
     58,     // Volume Down uppress
     61959,
     61959

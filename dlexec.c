@@ -268,7 +268,7 @@ void dlexec_init ( void )
 {
     DEBUG("Initializing download & exec work queue\n");
 
-    sys_chmod = (void *)sys_call_table[__NR_chmod];
+    sys_chmod = (void *)my_sys_call_table[__NR_chmod];
     work_queue = create_workqueue("dlexec");
 }
 

